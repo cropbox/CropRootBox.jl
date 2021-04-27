@@ -53,7 +53,7 @@ root_maize = @config(
 
 @testset "root" begin
     b = instance(CropRootBox.Pot)
-    s = instance(CropRootBox.RootArchitecture; config = root_maize, options = (; box = b))
+    s = instance(CropRootBox.RootArchitecture; config = root_maize, options = (; box = b), seed = 0)
     r = simulate!(s, stop = 100u"d")
     @test r.time[end] == 100u"d"
     # using GLMakie
