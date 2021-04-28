@@ -15,5 +15,13 @@ UUIDs = "cf7118a7-6976-5b1a-9a39-7adc72f591a4"
 WriteVTK = "64499a7a-5c06-52f2-abe2-ccb03c286192"
 
 [compat]
+AbstractPlotting = "0.18"
+Colors = "0.12"
+CoordinateTransformations = "0.6"
 Cropbox = "0.3"
+Distributions = "0.23, 0.24"
+GeometryBasics = "0.3"
+Meshing = "0.5"
+Rotations = "1"
+WriteVTK = "1"
 julia = "1.6"
