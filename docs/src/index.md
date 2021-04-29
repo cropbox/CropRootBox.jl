@@ -11,6 +11,10 @@ Pkg.add("CropRootBox")
 
 ## Getting Started
 
+```@setup root
+ENV["UNITFUL_FANCY_EXPONENTS"] = true
+```
+
 ```@example root
 using Cropbox
 using CropRootBox
