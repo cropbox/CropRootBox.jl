@@ -61,4 +61,5 @@ root_maize = @config(
     # GLMakie.save("root_maize.png", scn)
     CropRootBox.writevtk(tempname(), s)
     # CropRootBox.writepvd(tempname(), CropRootBox.RootArchitecture, config = root_maize, stop = 50)
+    CropRootBox.writestl(tempname(), s)
 end

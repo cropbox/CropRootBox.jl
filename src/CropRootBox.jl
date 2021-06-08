@@ -409,4 +409,8 @@ writepvd(name::AbstractString, S::Type{<:System}; kwargs...) = begin
     vtk_save(pvd)
 end
 
+using MeshIO
+using FileIO
+writestl(name::AbstractString, s::System) = save(File{format"STL_BINARY"}(name), mesh(s))
+
 end
