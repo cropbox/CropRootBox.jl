@@ -337,17 +337,21 @@ end
 end
 
 render(s::RootArchitecture; soilcore=nothing, resolution=(500, 500)) = begin
-    meshes = GeometryBasics.Mesh[]
-    gather!(s, Rendering; store=meshes, callback=render!)
     #HACK: comfortable default size when using WGLMakie inside Jupyter Notebook
     scene = AbstractPlotting.Scene(; resolution)
-    AbstractPlotting.mesh!(scene, merge(meshes))
+    AbstractPlotting.mesh!(scene, mesh(s))
     #HACK: customization for container
     AbstractPlotting.mesh!(scene, mesh(s.box), color=(:black, 0.02), transparency=true, shading=false)
     !isnothing(soilcore) && AbstractPlotting.mesh!(scene, mesh(soilcore), color=(:purple, 0.1), transparency=true, shading=false)
     #HACK: adjust mouse sensitivity: https://github.com/JuliaPlots/Makie.jl/issues/33
     AbstractPlotting.cameracontrols(scene).rotationspeed[] = 0.01
     scene
+end
+
+mesh(s::RootArchitecture) = begin
+    meshes = GeometryBasics.Mesh[]
+    gather!(s, Rendering; store=meshes, callback=render!)
+    merge(meshes)
 end
 render!(g::Gather, r::RootSegment, ::Val{:Rendering}) = begin
     m = mesh(r)
