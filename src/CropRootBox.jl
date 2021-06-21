@@ -4,7 +4,7 @@ using Cropbox
 using Distributions
 import AbstractPlotting
 import Meshing
-using GeometryBasics: GeometryBasics, Point3f0
+using GeometryBasics: GeometryBasics, Mesh, Point3f0
 using CoordinateTransformations: IdentityTransformation, LinearMap, Transformation, Translation
 using Rotations: RotZX
 using Colors: RGBA
@@ -411,6 +411,7 @@ end
 
 using MeshIO
 using FileIO
-writestl(name::AbstractString, s::System) = save(File{format"STL_BINARY"}(name), mesh(s))
+writestl(name::AbstractString, s::System) = writestl(name, mesh(s))
+writestl(name::AbstractString, m::Mesh) = save(File{format"STL_BINARY"}(name), m)
 
 end
