@@ -348,17 +348,17 @@ render(s::RootArchitecture; soilcore=nothing, resolution=(500, 500)) = begin
     scene
 end
 
-mesh(s::RootArchitecture) = begin
+mesh(s::RootArchitecture; container=nothing) = begin
     meshes = GeometryBasics.Mesh[]
-    gather!(s, Rendering; store=meshes, callback=render!)
+    gather!(s, Rendering; store=meshes, callback=render!, kwargs=(; container))
     merge(meshes)
 end
-render!(g::Gather, r::RootSegment, ::Val{:Rendering}) = begin
-    m = mesh(r)
+render!(g::Gather, r::RootSegment, ::Val{:Rendering}; container=nothing) = begin
+    m = isnothing(container) || r.ii'(container) ? mesh(r) : nothing
     !isnothing(m) && push!(g, m)
-    visit!(g, r)
+    visit!(g, r; container)
 end
-render!(g::Gather, a...) = visit!(g, a...)
+render!(g::Gather, a...; k...) = visit!(g, a...; k...)
 
 gatherbaseroot!(g::Gather, s::BaseRoot, ::Val{:BaseRoot}) = (push!(g, s); visit!(g, s))
 gatherbaseroot!(g::Gather, a...) = visit!(g, a...)
