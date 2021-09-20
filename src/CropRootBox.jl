@@ -297,10 +297,16 @@ end
 
 #TODO: provide @macro / function to automatically build a series of related Systems
 @system BaseRoot(RootSegment) <: RootSegment begin
-    T: transition ~ tabulate(rows=(:PrimaryRoot, :FirstOrderLateralRoot, :SecondOrderLateralRoot), parameter)
+    T: transition ~ tabulate(rows=(:PrimaryRoot, :FirstOrderLateralRoot, :SecondOrderLateralRoot, :ThirdOrderLateralRoot), parameter)
+end
+@system ThirdOrderLateralRoot{
+    Segment => ThirdOrderLateralRoot,
+}(BaseRoot, Tropism) <: BaseRoot begin
+    n: name => :ThirdOrderLateralRoot ~ preserve::sym
 end
 @system SecondOrderLateralRoot{
     Segment => SecondOrderLateralRoot,
+    Branch => ThirdOrderLateralRoot,
 }(BaseRoot, Tropism) <: BaseRoot begin
     n: name => :SecondOrderLateralRoot ~ preserve::sym
 end
