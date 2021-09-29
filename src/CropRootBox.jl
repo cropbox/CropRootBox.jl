@@ -301,13 +301,13 @@ end
 end
 @system ThirdOrderLateralRoot{
     Segment => ThirdOrderLateralRoot,
-}(BaseRoot, Tropism) <: BaseRoot begin
+}(BaseRoot, Gravitropism) <: BaseRoot begin
     n: name => :ThirdOrderLateralRoot ~ preserve::sym
 end
 @system SecondOrderLateralRoot{
     Segment => SecondOrderLateralRoot,
     Branch => ThirdOrderLateralRoot,
-}(BaseRoot, Tropism) <: BaseRoot begin
+}(BaseRoot, Gravitropism) <: BaseRoot begin
     n: name => :SecondOrderLateralRoot ~ preserve::sym
 end
 @system FirstOrderLateralRoot{
