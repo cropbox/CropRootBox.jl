@@ -355,7 +355,7 @@ end
 mesh(s::RootArchitecture; container=nothing) = begin
     meshes = GeometryBasics.Mesh[]
     gather!(s, Rendering; store=meshes, callback=render!, kwargs=(; container))
-    merge(meshes)
+    isempty(meshes) ? nothing : merge(meshes)
 end
 render!(g::Gather, r::RootSegment, ::Val{:Rendering}; container=nothing) = begin
     m = isnothing(container) || r.ii'(container) ? mesh(r) : nothing
@@ -417,5 +417,6 @@ using MeshIO
 using FileIO
 writestl(name::AbstractString, s::System) = writestl(name, mesh(s))
 writestl(name::AbstractString, m::Mesh) = save(File{format"STL_BINARY"}(name), m)
+writestl(name::AbstractString, ::Nothing) = @warn "no mesh available for writing $name"
 
 end
