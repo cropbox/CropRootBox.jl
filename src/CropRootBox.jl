@@ -335,7 +335,8 @@ end
 
 @system RootArchitecture(Controller) begin
     box(context) ~ <:Container(override)
-    maxB: number_of_basal_roots => 1 ~ preserve(parameter)
+    minB: minimum_number_of_basal_roots => 1 ~ preserve(parameter)
+    maxB: number_of_basal_roots => 1 ~ preserve(parameter, min=minB)
     RT0: initial_transformation => IdentityTransformation() ~ track::Transformation
     roots(roots, box, maxB, wrap(RT0)) => begin
         [produce(PrimaryRoot; box, RT0) for i in (length(roots)+1):maxB]
