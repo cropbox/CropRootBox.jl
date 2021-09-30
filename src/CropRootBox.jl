@@ -240,7 +240,7 @@ end
     RT1(RT0, RT): global_transformation => RT0 ∘ RT ~ track::Transformation
     cp(RT1): current_position => RT1(Point3f0(0, 0, 0)) ~ track::Point3f0
 
-    a: radius => 0.05 ~ preserve(u"cm", parameter, min=0.01)
+    a: radius => 0.05 ~ preserve(u"cm", extern, parameter, min=0.01)
 
     c: color => RGBA(1, 1, 1, 1) ~ preserve::RGBA(parameter)
 
@@ -258,9 +258,9 @@ end
     end ~ call::sym
 
     ms(l, Δl, lt, lmax): may_segment => (l >= Δl && lt < lmax) ~ flag
-    S(n, box, ro, zi, r, lb, la, ln, lmax, lt, ls1, wrap(RT1)): segment => begin
+    S(n, box, ro, zi, r, lb, la, ln, lmax, lt, ls1, wrap(RT1), a): segment => begin
         #HACK: keep lb/la/ln/lmax parameters same for consecutive segments
-        produce(eval(n); box, ro, zi=zi+1, r, lb, la, ln, lmax, lp=lt, ls=ls1, RT0=RT1)
+        produce(eval(n); box, ro, zi=zi+1, r, lb, la, ln, lmax, lp=lt, ls=ls1, RT0=RT1, a)
     end ~ produce::Segment(when=ms)
 
     mb(zt, li, ln): may_branch => (zt == :lateral && li >= ln) ~ flag
