@@ -180,7 +180,7 @@ end
     Δl(Δx) ~ preserve(u"cm", max=lr)
     lp: parent_length => 0 ~ preserve(u"cm", extern)
     ls: sibling_length => 0 ~ preserve(u"cm", extern)
-    l(pr): length ~ accumulate(u"cm", when=!im)
+    l(pr): length ~ accumulate(u"cm", max=Δl, when=!im)
     lr(lp, lmax): remaining_length => lmax - lp ~ track(u"cm")
     lt(lp, l): total_length => lp + l ~ track(u"cm")
     li(ls, l): interleaving_length => ls + l ~ track(u"cm")
