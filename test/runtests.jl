@@ -5,11 +5,11 @@ using Test
 root_maize = @config(
     :RootArchitecture => :maxB => 5,
     :BaseRoot => :T => [
-        # P F S T
-          0 1 0 0 ; # P
-          0 0 1 0 ; # F
-          0 0 0 0 ; # S
-          0 0 0 0 ; # T
+        # P F S    T
+          0 1 0 #= 0 =#; # P
+          0 0 1 #= 0 =#; # F
+          0 0 0 #= 0 =#; # S
+       #= 0 0 0    0   ; # T =#
     ],
     :PrimaryRoot => (;
         lb = 0.1 ± 0.01,
