@@ -4,7 +4,7 @@ using Cropbox
 using Distributions
 import Makie
 import Meshing
-using GeometryBasics: GeometryBasics, Mesh, Point3f0
+using GeometryBasics: GeometryBasics, Mesh, Point3f
 using CoordinateTransformations: IdentityTransformation, LinearMap, Transformation, Translation
 using Rotations: RotZX
 using Colors: RGBA
@@ -13,7 +13,7 @@ import UUIDs
 @system Rendering
 
 @system Container(Rendering, Controller) begin
-    dist(; p::Point3f0): distance => -Inf ~ call
+    dist(; p::Point3f): distance => -Inf ~ call
 end
 
 @system Pot(Container) <: Container begin
@@ -22,7 +22,7 @@ end
     h: height => 30 ~ preserve(u"cm", parameter)
     sq: square => false ~ preserve::Bool(parameter)
 
-    dist(nounit(r1), nounit(r2), nounit(h), sq; p::Point3f0): distance => begin
+    dist(nounit(r1), nounit(r2), nounit(h), sq; p::Point3f): distance => begin
         x, y, z = p
         if z < -h # below
             -z - h
@@ -52,7 +52,7 @@ end
     w: width => 10.5u"inch" ~ preserve(u"cm", parameter)
     h: height => 42u"inch" ~ preserve(u"cm", parameter)
 
-    dist(nounit(l), nounit(w), nounit(h); p::Point3f0): distance => begin
+    dist(nounit(l), nounit(w), nounit(h); p::Point3f): distance => begin
         x, y, z = p
         if z < -h # below
             -z - h
@@ -69,7 +69,7 @@ mesh(s::Rhizobox) = begin
     l = Cropbox.deunitfy(s.l', u"cm")
     w = Cropbox.deunitfy(s.w', u"cm")
     h = Cropbox.deunitfy(s.h', u"cm")
-    g = GeometryBasics.Rect3D(Point3f0(-l/2, -w/2, 0), Point3f0(l, w, -h))
+    g = GeometryBasics.Rect3D(Point3f(-l/2, -w/2, 0), Point3f(l, w, -h))
     GeometryBasics.mesh(g)
 end
 
@@ -79,7 +79,7 @@ end
     x0: x_origin => 0 ~ preserve(u"cm", parameter)
     y0: y_origin => 0 ~ preserve(u"cm", parameter)
 
-    dist(nounit(d), nounit(l), nounit(x0), nounit(y0); p::Point3f0): distance => begin
+    dist(nounit(d), nounit(l), nounit(x0), nounit(y0); p::Point3f): distance => begin
         x, y, z = p
         if z < -l # below
             -z - l
@@ -96,7 +96,7 @@ mesh(s::SoilCore) = begin
     l = Cropbox.deunitfy(s.l', u"cm")
     x0 = Cropbox.deunitfy(s.x0', u"cm")
     y0 = Cropbox.deunitfy(s.y0', u"cm")
-    g = GeometryBasics.Cylinder(Point3f0(x0, y0, 0), Point3f0(x0, y0, -l), Float32(d)/2)
+    g = GeometryBasics.Cylinder(Point3f(x0, y0, 0), Point3f(x0, y0, -l), Float32(d)/2)
     GeometryBasics.mesh(g)
 end
 
@@ -104,7 +104,7 @@ end
     d: depth => 0 ~ preserve(u"cm", parameter)
     t: thickness => 10 ~ preserve(u"cm", parameter)
 
-    dist(nounit(d), nounit(t); p::Point3f0): distance => begin
+    dist(nounit(d), nounit(t); p::Point3f): distance => begin
         x, y, z = p
         a = -d
         b = a - t
@@ -136,7 +136,7 @@ end
     to(RT0; α, β): tropism_objective => begin
         R = RotZX(β, α) |> LinearMap
         #-(RT0 ∘ R).linear[9]
-        p = (RT0 ∘ R)(Point3f0(0, 0, -1))
+        p = (RT0 ∘ R)(Point3f(0, 0, -1))
         p[3]
     end ~ call
 end
@@ -225,11 +225,11 @@ end
     β(A): radial_angle => A[2] ~ preserve(u"°")
 
     RT0: parent_transformation ~ track::Transformation(override)
-    pp(RT0): parent_position => RT0(Point3f0(0, 0, 0)) ~ preserve::Point3f0
+    pp(RT0): parent_position => RT0(Point3f(0, 0, 0)) ~ preserve::Point3f
     np(RT0, nounit(Δl); α, β): new_position => begin
         R = RotZX(β, α) |> LinearMap
-        (RT0 ∘ R)(Point3f0(0, 0, -Δl))
-    end ~ call::Point3f0
+        (RT0 ∘ R)(Point3f(0, 0, -Δl))
+    end ~ call::Point3f
     RT(nounit(l), α, β): local_transformation => begin
         # put root segment at parent's end
         T = Translation(0, 0, -l)
@@ -238,7 +238,7 @@ end
         R ∘ T
     end ~ track::Transformation
     RT1(RT0, RT): global_transformation => RT0 ∘ RT ~ track::Transformation
-    cp(RT1): current_position => RT1(Point3f0(0, 0, 0)) ~ track::Point3f0
+    cp(RT1): current_position => RT1(Point3f(0, 0, 0)) ~ track::Point3f
 
     a: radius => 0.05 ~ preserve(u"cm", extern, parameter, min=0.01)
 
@@ -281,7 +281,7 @@ mesh(s::RootSegment) = begin
     a = Cropbox.deunitfy(s.a', u"cm")
     (iszero(l) || iszero(a)) && return nothing
     r = a/2
-    g = GeometryBasics.Rect3D(Point3f0(-r, -r, 0), Point3f0(a, a, l))
+    g = GeometryBasics.Rect3D(Point3f(-r, -r, 0), Point3f(a, a, l))
     m = GeometryBasics.mesh(g)
 
     #HACK: reconstruct a mesh with transformation applied
