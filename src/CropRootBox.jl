@@ -69,7 +69,7 @@ mesh(s::Rhizobox) = begin
     l = Cropbox.deunitfy(s.l', u"cm")
     w = Cropbox.deunitfy(s.w', u"cm")
     h = Cropbox.deunitfy(s.h', u"cm")
-    g = GeometryBasics.Rect3D(Point3f(-l/2, -w/2, 0), Point3f(l, w, -h))
+    g = GeometryBasics.Rect3(Point3f(-l/2, -w/2, 0), Point3f(l, w, -h))
     GeometryBasics.mesh(g)
 end
 
@@ -281,7 +281,7 @@ mesh(s::RootSegment) = begin
     a = Cropbox.deunitfy(s.a', u"cm")
     (iszero(l) || iszero(a)) && return nothing
     r = a/2
-    g = GeometryBasics.Rect3D(Point3f(-r, -r, 0), Point3f(a, a, l))
+    g = GeometryBasics.Rect3(Point3f(-r, -r, 0), Point3f(a, a, l))
     m = GeometryBasics.mesh(g)
 
     #HACK: reconstruct a mesh with transformation applied
