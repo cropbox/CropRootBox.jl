@@ -327,9 +327,9 @@ Cropbox.update!(s::BaseRoot, t) = begin
     #HACK: merely checking im flag would miss pre-stage update for producing S
     if s.is'
         update!(s.S', t)
+    end
+    if s.ib'
         update!(s.B', t)
-    else
-        Cropbox._update!(s, t)
     end
 end
 
