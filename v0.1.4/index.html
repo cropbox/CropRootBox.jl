@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Home · CropRootBox.jl</title><script async src="https://www.googletagmanager.com/gtag/js?id=UA-192782823-1"></script><script>  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'UA-192782823-1', {'page_path': location.pathname + location.search + location.hash});
+</script><script data-outdated-warner src="assets/warner.js"></script><link rel="canonical" href="https://cropbox.github.io/CropRootBox.jl/stable/"/><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.039/juliamono-regular.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.11/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="assets/documenter.js"></script><script src="siteinfo.js"></script><script src="../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="assets/themeswap.js"></script><link href="assets/favicon.ico" rel="icon" type="image/x-icon"/></head><body><div id="documenter"><nav class="docs-sidebar"><a class="docs-logo" href><img src="assets/logo.svg" alt="CropRootBox.jl logo"/></a><div class="docs-package-name"><span class="docs-autofit"><a href>CropRootBox.jl</a></span></div><form class="docs-search" action="search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li class="is-active"><a class="tocitem" href>Home</a><ul class="internal"><li><a class="tocitem" href="#Installation"><span>Installation</span></a></li><li><a class="tocitem" href="#Getting-Started"><span>Getting Started</span></a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href>Home</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Home</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/cropbox/CropRootBox.jl/blob/master/docs/src/index.md" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="CropRootBox.jl"><a class="docs-heading-anchor" href="#CropRootBox.jl">CropRootBox.jl</a><a id="CropRootBox.jl-1"></a><a class="docs-heading-anchor-permalink" href="#CropRootBox.jl" title="Permalink"></a></h1><p><a href="https://github.com/cropbox/CropRootBox.jl">CropRootBox.jl</a> implements a root system architecture simulation algorithm described in <a href="https://plant-root-soil-interactions-modelling.github.io/CRootBox/">CRootBox</a> model. Our implementation is written in a domain-specific language based on Julia using <a href="https://github.com/cropbox/Cropbox.jl">Cropbox</a> framework. While Cropbox framework was primarily designed for helping development of conventional process-based crop models with less dynamic structural development in mind, it is still capable of handling complex structure as envisioned by functional-structural plant models (FSPM).</p><h2 id="Installation"><a class="docs-heading-anchor" href="#Installation">Installation</a><a id="Installation-1"></a><a class="docs-heading-anchor-permalink" href="#Installation" title="Permalink"></a></h2><pre><code class="language-julia hljs">using Pkg
+Pkg.add(&quot;CropRootBox&quot;)</code></pre><h2 id="Getting-Started"><a class="docs-heading-anchor" href="#Getting-Started">Getting Started</a><a id="Getting-Started-1"></a><a class="docs-heading-anchor-permalink" href="#Getting-Started" title="Permalink"></a></h2><pre><code class="language-julia hljs">using Cropbox
+using CropRootBox</code></pre><p><code>BaseRoot</code> is a common system inherited by other systems representing each root type, <em>i.e.</em>, <code>PrimaryRoot</code>, <code>FirstOrderLateralRoot</code>, and <code>SecondOrderLateralRoot</code> in this example.</p><pre><code class="language-julia hljs">parameters(CropRootBox.BaseRoot; alias = true)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Config for 1 system:
+  BaseRoot
+    tropsim_trials                  = 1.0
+    length_of_apical_zone           = 0.5 cm
+    maximal_length                  = 3.9 cm
+    length_between_lateral_branches = 0.3 cm
+    length_of_basal_zone            = 0.4 cm
+    maximum_elongation_rate         = 1.0 cm d⁻¹
+    axial_resolution                = 1 cm
+    standard_deviation_of_angle     = 30°
+    insertion_angle                 = 30°
+    angular_angle_trials            = 20
+    radial_angle_trials             = 5
+    radius                          = 0.05 cm
+    color                           = RGBA{N0f8}(1.0,1.0,1.0,1.0)
+    transition                      = nothing</code></pre><p>Here is an example configuration for simulating maize root growth. Some parameter values are annotated with standard deviation after <code>±</code> indicating actual values are randomly sampled from normal distribution as needed.</p><pre><code class="language-julia hljs">config = @config(
+    :RootArchitecture =&gt; :maxB =&gt; 5,
+    :BaseRoot =&gt; :T =&gt; [
+        # P F S
+          0 1 0 ; # P
+          0 0 1 ; # F
+          0 0 0 ; # S
+    ],
+    :PrimaryRoot =&gt; (;
+        lb = 0.1 ± 0.01,
+        la = 18.0 ± 1.8,
+        ln = 0.6 ± 0.06,
+        lmax = 89.7 ± 7.4,
+        r = 6.0 ± 0.6,
+        Δx = 0.5,
+        σ = 10,
+        θ = 80 ± 8,
+        N = 1.5,
+        a = 0.04 ± 0.004,
+        color = CropRootBox.RGBA(1, 0, 0, 1),
+    ),
+    :FirstOrderLateralRoot =&gt; (;
+        lb = 0.2 ± 0.04,
+        la = 0.4 ± 0.04,
+        ln = 0.4 ± 0.03,
+        lmax = 0.6 ± 1.6,
+        r = 2.0 ± 0.2,
+        Δx = 0.1,
+        σ = 20,
+        θ = 70 ± 15,
+        N = 1,
+        a = 0.03 ± 0.003,
+        color = CropRootBox.RGBA(0, 1, 0, 1),
+    ),
+    :SecondOrderLateralRoot =&gt; (;
+        lb = 0,
+        la = 0.4 ± 0.02,
+        ln = 0,
+        lmax = 0.4,
+        r = 2.0 ± 0.2,
+        Δx = 0.1,
+        σ = 20,
+        θ = 70 ± 10,
+        N = 2,
+        a = 0.02 ± 0.002,
+        color = CropRootBox.RGBA(0, 0, 1, 1),
+    )
+)</code></pre><p>An instance of <code>RootArchitecture</code> system is created with an instance of <code>Pot</code> describing a boundary of root growth.</p><pre><code class="language-julia hljs">b = instance(CropRootBox.Pot)
+s = instance(CropRootBox.RootArchitecture; config, options = (; box = b), seed = 0)
+r = simulate!(s, stop = 100u&quot;d&quot;)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Progress:   0%[&gt;                          ]  ETA: 3:12:53 ( 4.83  s/it)Progress: 100%[===========================] Time: 0:00:10 ( 4.31 ms/it)</code></pre><p>After 100 days of simulation, we can draw a rendering of root structure bounded in the pot.</p><pre><code class="language- hljs">using GLMakie
+scn = CropRootBox.render(s)
+GLMakie.save(&quot;root_maize.png&quot;, scn; resolution = (1600, 3200))
+; # hide</code></pre><p><img src="root_maize.png" alt/></p><p>For more information about using the framework such as <code>instance()</code> and <code>simulate()</code> functions, please refer to the <a href="http://cropbox.github.io/Cropbox.jl/stable/">Cropbox documentation</a>.</p></article><nav class="docs-footer"><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.10 on <span class="colophon-date" title="Tuesday 14 December 2021 07:52">Tuesday 14 December 2021</span>. Using Julia version 1.7.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
