@@ -274,6 +274,11 @@ end
 
     is(S): is_segmented => !isnothing(S) ~ flag
     ib(B): is_branched => !isnothing(B) ~ flag
+
+    id(im, ms, is, mb, ib): is_done => begin
+        #HACK: merely checking im flag would miss pre-stage update for producing S
+        im && (ms && is || !ms) && (mb && ib || !mb)
+    end ~ flag
 end
 
 mesh(s::RootSegment) = begin
@@ -324,12 +329,11 @@ end
 end
 
 Cropbox.update!(s::BaseRoot, t) = begin
-    #HACK: merely checking im flag would miss pre-stage update for producing S
-    if s.is'
-        update!(s.S', t)
-    end
-    if s.ib'
-        update!(s.B', t)
+    if s.id'
+        Cropbox.update!(s.S', t)
+        Cropbox.update!(s.B', t)
+    else
+        Cropbox._update!(s, t)
     end
 end
 
