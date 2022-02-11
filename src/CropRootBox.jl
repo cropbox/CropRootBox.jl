@@ -1,13 +1,17 @@
-module CropRootBox
+using Cropbox
+using GLMakie
+using Test
 
+#### CropRootBox Start
 using Cropbox
 using Distributions
 import Makie
 import Meshing
-using GeometryBasics: GeometryBasics, Mesh, Point3f
-using CoordinateTransformations: IdentityTransformation, LinearMap, Transformation, Translation
-using Rotations: RotZX
+using GeometryBasics: GeometryBasics, Mesh, Point3f, coordinates, faces, FaceView
+using CoordinateTransformations: IdentityTransformation, LinearMap, Transformation, Translation, recenter
+using Rotations: RotZX, RotXY, RotX, RotY
 using Colors: RGBA
+using StaticArrays
 import UUIDs
 
 @system Rendering
@@ -73,6 +77,52 @@ mesh(s::Rhizobox) = begin
     GeometryBasics.mesh(g)
 end
 
+@system Rhizobox2(Container) <: Container begin
+    l: length => 16u"inch" ~ preserve(u"cm", parameter)
+    w: width => 10.5u"inch" ~ preserve(u"cm", parameter)
+    h: height => 42u"inch" ~ preserve(u"cm", parameter)
+
+    θ_w: ground_incident_w => 60 ~ preserve(u"°", parameter)
+    ϕ_w(θ_w): calc_angle_w => 90u"°" - θ_w ~ preserve(u"°")
+
+    θ_l: ground_incident_l => 90 ~ preserve(u"°", parameter)
+    ϕ_l(θ_l): calc_angle_l => 90u"°" - θ_l ~ preserve(u"°")
+
+    w_scale: width_position => 0 ~ preserve(parameter, extern, min = 0, max = 1) # Scale of 0 -> 1 for position from mid to edge
+    l_scale: length_position => 0 ~ preserve(parameter, extern, min = 0, max = 1) # Scale of 0 -> 1 for position from mid to edge
+
+    RT(nounit(w), nounit(l), w_scale, l_scale, ϕ_w, ϕ_l): transformation => begin
+        R = RotXY(ϕ_l, ϕ_w) |> LinearMap
+        T = Translation(l_scale * -l/2 * cos(ϕ_w), w_scale * -w/2 * cos(ϕ_l), 0)
+        R ∘ T
+    end ~ track::Transformation
+
+    dist(nounit(l), nounit(w), nounit(h), RT, ϕ_w, ϕ_l; p::Point3f): distance => begin
+        x, y, z = inv(RT)(p)
+        if z < -h # below
+            -z - h
+        elseif 0 < z # above
+            z
+        else # inside: -h <= z <= 0
+            d = abs(y) - w/2
+            d < 0 ? abs(x) - l/2 : d
+        end
+    end ~ call
+end
+
+mesh(s::Rhizobox2) = begin
+    l = Cropbox.deunitfy(s.l', u"cm")
+    w = Cropbox.deunitfy(s.w', u"cm")
+    h = Cropbox.deunitfy(s.h', u"cm")
+    g = GeometryBasics.Rect3(Point3f(-l/2, -w/2, 0), Point3f(l, w, -h))
+    m = GeometryBasics.mesh(g)
+
+    mv = GeometryBasics.decompose(GeometryBasics.Point, m) # Decompose the mesh into coordinates
+    mf = GeometryBasics.decompose(GeometryBasics.TriangleFace{Int}, m) # Decompose mesh into faces
+    M = s.RT'
+    GeometryBasics.normal_mesh(M.(mv), mf) # Apply rotation to coordinates and connect back together using faces
+end
+
 @system SoilCore(Container) <: Container begin
     d: diameter => 5 ~ preserve(u"cm", parameter)
     l: length => 90 ~ preserve(u"cm", parameter)
@@ -106,7 +156,7 @@ end
 
     dist(nounit(d), nounit(t); p::Point3f): distance => begin
         x, y, z = p
-        a = -d
+        a = -dc
         b = a - t
         if a <= z # above
             z - a
@@ -148,7 +198,7 @@ end
     end ~ call
 end
 
-@system RootSegment{
+@system RootSegment{ # TODO: Add diameter
     Segment => RootSegment,
     Branch => RootSegment,
 }(Tropism, Rendering) begin
@@ -176,7 +226,7 @@ end
     r: maximum_elongation_rate => 1.0 ~ preserve(u"cm/d", extern, parameter, min=0)
     pr(r): potential_elongation_rate ~ track(u"cm/d")
 
-    t(context.clock.time): timestamp ~ preserve(u"hr")
+    t(context.clock.time): timestamp ~ preserve(u"minute")
     Δl(Δx) ~ preserve(u"cm", max=lr)
     lp: parent_length => 0 ~ preserve(u"cm", extern)
     ls: sibling_length => 0 ~ preserve(u"cm", extern)
@@ -240,7 +290,17 @@ end
     RT1(RT0, RT): global_transformation => RT0 ∘ RT ~ track::Transformation
     cp(RT1): current_position => RT1(Point3f(0, 0, 0)) ~ track::Point3f
 
-    a: radius => 0.05 ~ preserve(u"cm", extern, parameter, min=0.01)
+    # Attempt at dynamic radius
+    # ISSUE: Radius growth is happening backwards, thicker at the bottom
+    # SOLUTION: Somehow trace back to previous parent roots and update based on time step?
+    # Very intensive in terms of processing/time
+    # OR: Could hard code a simulation stop time into the config that's passed here. Can then do
+    # (stop time - t) as the time calculation to get diameter to work
+    ri: radius_initial => 0.04 ~ preserve(u"cm", extern, parameter, min = 0.01)
+    thr: radius_threshold => 0.1 ~ preserve(u"cm", extern, parameter, min = 0.01)
+    gr: radius_growth_rate => 0.0005 ~ preserve(u"mm/hr", extern, parameter, min = 0.0000001)
+    fl(a, thr): flag_variable => a < thr ~ flag
+    a(gr): radius ~ accumulate(u"mm", init = ri, when = fl, min=0.01) 
 
     c: color => RGBA(1, 1, 1, 1) ~ preserve::RGBA(parameter)
 
@@ -274,11 +334,6 @@ end
 
     is(S): is_segmented => !isnothing(S) ~ flag
     ib(B): is_branched => !isnothing(B) ~ flag
-
-    id(im, ms, is, mb, ib): is_done => begin
-        #HACK: merely checking im flag would miss pre-stage update for producing S
-        im && (ms && is || !ms) && (mb && ib || !mb)
-    end ~ flag
 end
 
 mesh(s::RootSegment) = begin
@@ -328,14 +383,6 @@ end
     n: name => :PrimaryRoot ~ preserve::sym
 end
 
-Cropbox.update!(s::BaseRoot, t) = begin
-    if s.id'
-        Cropbox.update!(s.S', t)
-        Cropbox.update!(s.B', t)
-    else
-        Cropbox._update!(s, t)
-    end
-end
 
 @system RootArchitecture(Controller) begin
     box(context) ~ <:Container(override)
@@ -424,4 +471,186 @@ writestl(name::AbstractString, s::System) = writestl(name, mesh(s))
 writestl(name::AbstractString, m::Mesh) = save(File{format"STL_BINARY"}(name), m)
 writestl(name::AbstractString, ::Nothing) = @warn "no mesh available for writing $name"
 
-end
+#### CropRootBox End
+
+
+
+
+# CONFIGS
+
+### Figure 1-4 root config
+root_maize = @config(
+    :RootArchitecture => :maxB => 5,
+    :BaseRoot => :T => [
+        # P F S
+          0 1 0 ; # P
+          0 0 1 ; # F
+          0 0 0 ; # S
+    ],
+    :PrimaryRoot => (;
+        lb = 0.1 ± 0.01,
+        la = 18.0 ± 1.8,
+        ln = 0.6 ± 0.06,
+        lmax = 89.7 ± 7.4,
+        r = 6.0 ± 0.6,
+        Δx = 0.5,
+        σ = 10,
+        θ = 80 ± 8,
+        N = 1.5,
+        ri = 0.04 ± 0.004,
+        gr = 0.005,
+        thr = 0.1,
+        color = RGBA(1, 0, 0, 1),
+    ),
+    :FirstOrderLateralRoot => (;
+        lb = 0.2 ± 0.04,
+        la = 0.4 ± 0.04,
+        ln = 0.4 ± 0.03,
+        lmax = 0.6 ± 1.6,
+        r = 2.0 ± 0.2,
+        Δx = 0.1,
+        σ = 20,
+        θ = 70 ± 15,
+        N = 1,
+        ri = 0.03 ± 0.003,
+        gr = 0.003,
+        thr = 0.07,
+        color = RGBA(0, 1, 0, 1),
+    ),
+    :SecondOrderLateralRoot => (;
+        lb = 0,
+        la = 0.4 ± 0.02,
+        ln = 0,
+        lmax = 0.4,
+        r = 2.0 ± 0.2,
+        Δx = 0.1,
+        σ = 20,
+        θ = 70 ± 10,
+        N = 2,
+        ri = 0.02 ± 0.002,
+        gr = 0.001,
+        thr = 0.03,
+        color = RGBA(0, 0, 1, 1),
+    )
+)
+
+
+# Figure 1
+container_rhizobox = :Rhizobox => (;
+    l = 16u"inch",
+    w = 10.5u"inch",
+    h = 42u"inch",
+)
+
+
+# Figure 2
+container_rhizobox = :Rhizobox2 => (;
+    l = 5u"inch",
+    w = 10u"inch",
+    h = 40u"inch",
+    θ_w = 70u"°",
+    θ_l = 90u"°",
+    w_scale = 0,
+    l_scale = 0,
+)
+
+
+# Figure 3
+container_rhizobox = :Rhizobox2 => (;
+    l = 5u"inch",
+    w = 10u"inch",
+    h = 40u"inch",
+    θ_w = 70u"°",
+    θ_l = 90u"°",
+    w_scale = 0.25,
+    l_scale = 1,
+)
+
+
+# Figure 4
+container_rhizobox = :Rhizobox2 => (;
+    l = 5u"inch",
+    w = 10u"inch",
+    h = 40u"inch",
+    θ_w = 70u"°",
+    θ_l = 80u"°",
+    w_scale = 0,
+    l_scale = 0,
+)
+
+
+# Figure 5
+root_maize = @config(
+    :RootArchitecture => :maxB => 5,
+    :BaseRoot => :T => [
+        # P F S
+          0 1 0 ; # P
+          0 0 1 ; # F
+          0 0 0 ; # S
+    ],
+    :PrimaryRoot => (;
+        lb = 0.1 ± 0.01,
+        la = 18.0 ± 1.8,
+        ln = 0.6 ± 0.06,
+        lmax = 89.7 ± 7.4,
+        r = 6.0 ± 0.6,
+        Δx = 0.5,
+        σ = 10,
+        θ = 80 ± 8,
+        N = 1.5,
+        ri = 0.04 ± 0.004,
+        gr = 0.005,
+        thr = 1.0,
+        color = RGBA(1, 0, 0, 1),
+    ),
+    :FirstOrderLateralRoot => (;
+        lb = 0.2 ± 0.04,
+        la = 0.4 ± 0.04,
+        ln = 0.4 ± 0.03,
+        lmax = 0.6 ± 1.6,
+        r = 2.0 ± 0.2,
+        Δx = 0.1,
+        σ = 20,
+        θ = 70 ± 15,
+        N = 1,
+        ri = 0.03 ± 0.003,
+        gr = 0.003,
+        thr = 0.7,
+        color = RGBA(0, 1, 0, 1),
+    ),
+    :SecondOrderLateralRoot => (;
+        lb = 0,
+        la = 0.4 ± 0.02,
+        ln = 0,
+        lmax = 0.4,
+        r = 2.0 ± 0.2,
+        Δx = 0.1,
+        σ = 20,
+        θ = 70 ± 10,
+        N = 2,
+        ri = 0.02 ± 0.002,
+        gr = 0.001,
+        thr = 0.3,
+        color = RGBA(0, 0, 1, 1),
+    )
+)
+
+container_rhizobox = :Rhizobox2 => (;
+    l = 5u"inch",
+    w = 10u"inch",
+    h = 40u"inch",
+    θ_w = 70u"°",
+    θ_l = 90u"°",
+    w_scale = 0,
+    l_scale = 0,
+)
+
+
+# SIMULATE AND RUN CONFIGS
+b = instance(Rhizobox2, config = container_rhizobox)
+s = instance(RootArchitecture; config = root_maize, options = (; box = b), seed = 0)
+r = simulate!(s, stop = 100u"d") #(to see diameter effect, reduce simulation length to 10d)
+
+scn = render(s)
+
+
