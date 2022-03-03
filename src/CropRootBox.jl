@@ -419,6 +419,24 @@ render!(g::Gather, a...; k...) = visit!(g, a...; k...)
 gatherbaseroot!(g::Gather, s::BaseRoot, ::Val{:BaseRoot}) = (push!(g, s); visit!(g, s))
 gatherbaseroot!(g::Gather, a...) = visit!(g, a...)
 
+#TODO: implement a simpler generic gather interface
+gather_primaryroot!(g::Gather, s::PrimaryRoot, ::Val{:BaseRoot}) = (push!(g, s); visit!(g, s))
+gather_primaryroot!(g::Gather, s::BaseRoot, ::Val{:BaseRoot}) = visit!(g, s)
+gather_primaryroot!(g::Gather, a...) = visit!(g, a...)
+
+gather_firstorderlateralroot!(g::Gather, s::FirstOrderLateralRoot, ::Val{:BaseRoot}) = (push!(g, s); visit!(g, s))
+gather_firstorderlateralroot!(g::Gather, s::BaseRoot, ::Val{:BaseRoot}) = visit!(g, s)
+gather_firstorderlateralroot!(g::Gather, a...) = visit!(g, a...)
+
+gather_secondorderlateralroot!(g::Gather, s::SecondOrderLateralRoot, ::Val{:BaseRoot}) = (push!(g, s); visit!(g, s))
+gather_secondorderlateralroot!(g::Gather, s::BaseRoot, ::Val{:BaseRoot}) = visit!(g, s)
+gather_secondorderlateralroot!(g::Gather, a...) = visit!(g, a...)
+
+make_gather_root(::Type{PrimaryRoot}) = gather_primaryroot!
+make_gather_root(::Type{FirstOrderLateralRoot}) = gather_firstorderlateralroot!
+make_gather_root(::Type{SecondOrderLateralRoot}) = gather_secondorderlateralroot!
+make_gather_root(::Type{BaseRoot}) = gatherbaseroot!
+
 gathergeom!(g::Gather,  r::BaseRoot, ::Val{:BaseRoot}) = begin
     r.zi' == 0 && push!(g, (
         point=[r.pp', r.cp', r.S["**"].cp'...],
