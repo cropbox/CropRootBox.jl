@@ -349,12 +349,13 @@ end
 
 render(s::RootArchitecture; soilcore=nothing, resolution=(500, 500)) = begin
     #HACK: comfortable default size when using WGLMakie inside Jupyter Notebook
-    scene = Makie.Scene(; resolution)
+    fig = Makie.Figure(; resolution)
+    scene = Makie.LScene(fig[1, 1])
     Makie.mesh!(scene, mesh(s))
     #HACK: customization for container
     Makie.mesh!(scene, mesh(s.box), color=(:black, 0.02), transparency=true, shading=false)
     !isnothing(soilcore) && Makie.mesh!(scene, mesh(soilcore), color=(:purple, 0.1), transparency=true, shading=false)
-    scene
+    fig
 end
 
 mesh(s::RootArchitecture; container=nothing) = begin
