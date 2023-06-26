@@ -1,4 +1,4 @@
-<a href="https://github.com/cropbox/Cropbox.jl"><img src="https://github.com/cropbox/Cropbox.jl/raw/main/docs/src/assets/logo.svg" alt="Cropbox" width="150"></a>
+<a href="https://github.com/cropbox/Cropbox.jl"><img src="https://github.com/cropbox/Cropbox.jl/raw/main/docs/src/assets/logo.svg" alt="Cropbox" width="150"></a><a href="https://doi.org/10.5281/zenodo.8083525"><img src="https://zenodo.org/badge/DOI/10.5281/zenodo.8083525.svg" alt="DOI"></a>
 
 # CropRootBox.jl
 
