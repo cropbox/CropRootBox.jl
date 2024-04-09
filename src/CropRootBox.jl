@@ -353,7 +353,7 @@ render(s::RootArchitecture; soilcore=nothing, size=(500, 500)) = begin
     scene = Makie.LScene(fig[1, 1])
     Makie.mesh!(scene, mesh(s))
     #HACK: customization for container
-    Makie.mesh!(scene, mesh(s.box), color=(:black, 0.02), transparency=true, shading=false)
+    Makie.mesh!(scene, mesh(s.box), color=(:black, 0.02), transparency=true)
     !isnothing(soilcore) && Makie.mesh!(scene, mesh(soilcore), color=(:purple, 0.1), transparency=true, shading=false)
     Makie.cam3d!(scene, projectiontype = Makie.Orthographic)
     fig
