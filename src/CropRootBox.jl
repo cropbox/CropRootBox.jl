@@ -347,9 +347,9 @@ end
     end ~ produce::PrimaryRoot[]
 end
 
-render(s::RootArchitecture; soilcore=nothing, resolution=(500, 500)) = begin
+render(s::RootArchitecture; soilcore=nothing, size=(500, 500)) = begin
     #HACK: comfortable default size when using WGLMakie inside Jupyter Notebook
-    fig = Makie.Figure(; resolution)
+    fig = Makie.Figure(; size)
     scene = Makie.LScene(fig[1, 1])
     Makie.mesh!(scene, mesh(s))
     #HACK: customization for container

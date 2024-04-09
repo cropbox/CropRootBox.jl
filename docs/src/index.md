@@ -94,7 +94,7 @@ After 100 days of simulation, we can draw a rendering of root structure bounded 
 ```@example root
 using GLMakie
 scn = CropRootBox.render(s)
-GLMakie.save("root_maize.png", scn; resolution = (1600, 3200))
+GLMakie.save("root_maize.png", scn; size = (1600, 3200))
 ; # hide
 ```
 
