@@ -1,6 +1,7 @@
 using Cropbox
 using GLMakie
 using Test
+using FileIO
 
 #### CropRootBox Start
 using Cropbox
@@ -178,6 +179,7 @@ end
     to(RT0; α, β): tropism_objective => begin
         R = RotZX(β, α) |> LinearMap
         (RT0 ∘ R).linear[9] |> abs
+        #0.01 * s
     end ~ call
 end
 
@@ -185,16 +187,20 @@ end
     RT0: parent_transformation ~ hold
     to(RT0; α, β): tropism_objective => begin
         R = RotZX(β, α) |> LinearMap
-        #-(RT0 ∘ R).linear[9]
+        #-10 * abs((RT0 ∘ R).linear[9])
         p = (RT0 ∘ R)(Point3f(0, 0, -1))
-        p[3]
+        0.5 * (p[3])
     end ~ call
 end
 
 @system Exotropism(Tropism) <: Tropism begin
-    to(; α, β): tropism_objective => begin
+    RT0: parent_transformation ~ hold
+    to(RT0; α, β): tropism_objective => begin
         #HACK: not exact implementation, needs to keep initial heading
-        abs(Cropbox.deunitfy(α))
+        #abs(Cropbox.deunitfy(α))
+        R = RotZX(β, α) |> LinearMap
+        p = (RT0 ∘ R).linear[9] |> abs
+        0.00001 * acos(-p)
     end ~ call
 end
 
@@ -204,6 +210,13 @@ end
 }(Tropism, Rendering) begin
     box ~ <:Container(override)
 
+    ## How to relate back to the shoot? Apply transformation for different starting positions?
+    firstB: first_basal_emergence => 6 ~ preserve(u"d", extern, parameter, min = 0)
+    delayB: time_between_basal => 2 ~ preserve(u"d", extern, parameter, min = 0)
+    firstS: first_crown_emergence => 10 ~ preserve(u"d", extern, parameter, min = 0)
+    delayS: time_between_crown => 2 ~ preserve(u"d", extern, parameter, min = 0)
+
+    ## Need to add new root order?
     ro: root_order => 1 ~ preserve::int(extern)
     zi: zone_index => 0 ~ preserve::int(extern)
 
@@ -296,11 +309,11 @@ end
     # Very intensive in terms of processing/time
     # OR: Could hard code a simulation stop time into the config that's passed here. Can then do
     # (stop time - t) as the time calculation to get diameter to work
-    ri: radius_initial => 0.04 ~ preserve(u"cm", extern, parameter, min = 0.01)
-    thr: radius_threshold => 0.1 ~ preserve(u"cm", extern, parameter, min = 0.01)
-    gr: radius_growth_rate => 0.0005 ~ preserve(u"mm/hr", extern, parameter, min = 0.0000001)
-    fl(a, thr): flag_variable => a < thr ~ flag
-    a(gr): radius ~ accumulate(u"mm", init = ri, when = fl, min=0.01) 
+    ai: radius_initial => 0.04 ~ preserve(u"cm", extern, parameter, min = 0.01)
+    amax: radius_threshold => 0.1 ~ preserve(u"cm", extern, parameter, min = 0.01)
+    ar: radius_growth_rate => 0.0005 ~ preserve(u"mm/hr", extern, parameter, min = 0.0000001)
+    fl(a, amax): flag_variable => a < amax ~ flag
+    a(ar): radius ~ accumulate(u"mm", init = ai, when = fl, min=0.01) 
 
     c: color => RGBA(1, 1, 1, 1) ~ preserve::RGBA(parameter)
 
@@ -357,7 +370,7 @@ end
 
 #TODO: provide @macro / function to automatically build a series of related Systems
 @system BaseRoot(RootSegment) <: RootSegment begin
-    T: transition ~ tabulate(rows=(:PrimaryRoot, :FirstOrderLateralRoot, :SecondOrderLateralRoot, #= :ThirdOrderLateralRoot =#), parameter)
+    T: transition ~ tabulate(rows=(:Shoot, :PrimaryRoot, :FirstOrderLateralRoot, :SecondOrderLateralRoot, #= :ThirdOrderLateralRoot =#), parameter)
 end
 @system ThirdOrderLateralRoot{
     Segment => ThirdOrderLateralRoot,
@@ -373,7 +386,7 @@ end
 @system FirstOrderLateralRoot{
     Segment => FirstOrderLateralRoot,
     Branch => SecondOrderLateralRoot,
-}(BaseRoot, Gravitropism) <: BaseRoot begin
+}(BaseRoot, Gravitropism, Exotropism, Plagiotropism) <: BaseRoot begin
     n: name => :FirstOrderLateralRoot ~ preserve::sym
 end
 @system PrimaryRoot{
@@ -382,27 +395,32 @@ end
 }(BaseRoot, Gravitropism) <: BaseRoot begin
     n: name => :PrimaryRoot ~ preserve::sym
 end
+@system Shoot{
+    Segment => Shoot,
+    Branch => PrimaryRoot,
+}(BaseRoot, Gravitropism) <: BaseRoot begin
+    n: name => :Shoot ~ preserve::sym
+end
 
 
 @system RootArchitecture(Controller) begin
     box(context) ~ <:Container(override)
     minB: minimum_number_of_basal_roots => 1 ~ preserve(parameter)
-    maxB: number_of_basal_roots => 1 ~ preserve(parameter, min=minB)
+    maxB: number_of_basal_roots => 5 ~ preserve(parameter, min=minB)
     RT0: initial_transformation => IdentityTransformation() ~ track::Transformation
     roots(roots, box, maxB, wrap(RT0)) => begin
-        [produce(PrimaryRoot; box, RT0) for i in (length(roots)+1):maxB]
-    end ~ produce::PrimaryRoot[]
+        [produce(Shoot; box, RT0) for i in (length(roots)+1):maxB]
+    end ~ produce::Shoot[]
 end
 
-render(s::RootArchitecture; soilcore=nothing, size=(500, 500)) = begin
+render(s::RootArchitecture; soilcore=nothing, resolution=(500, 500)) = begin
     #HACK: comfortable default size when using WGLMakie inside Jupyter Notebook
-    fig = Makie.Figure(; size)
-    scene = Makie.LScene(fig[1, 1])
+    fig = Makie.Figure(; resolution)
+    scene = Makie.LScene(fig[1, 1], show_axis = false)
     Makie.mesh!(scene, mesh(s))
     #HACK: customization for container
-    Makie.mesh!(scene, mesh(s.box), color=(:black, 0.02), transparency=true)
+    Makie.mesh!(scene, mesh(s.box), color=(:black, 0.02), transparency=true, shading=false)
     !isnothing(soilcore) && Makie.mesh!(scene, mesh(soilcore), color=(:purple, 0.1), transparency=true, shading=false)
-    Makie.cam3d!(scene, projectiontype = Makie.Orthographic)
     fig
 end
 
@@ -422,6 +440,10 @@ gatherbaseroot!(g::Gather, s::BaseRoot, ::Val{:BaseRoot}) = (push!(g, s); visit!
 gatherbaseroot!(g::Gather, a...) = visit!(g, a...)
 
 #TODO: implement a simpler generic gather interface
+gather_shoot!(g::Gather, s::Shoot, ::Val{:BaseRoot}) = (push!(g, s); visit!(g, s))
+gather_shoot!(g::Gather, s::BaseRoot, ::Val{:BaseRoot}) = visit!(g, s)
+gather_shoot!(g::Gather, a...) = visit!(g, a...)
+
 gather_primaryroot!(g::Gather, s::PrimaryRoot, ::Val{:BaseRoot}) = (push!(g, s); visit!(g, s))
 gather_primaryroot!(g::Gather, s::BaseRoot, ::Val{:BaseRoot}) = visit!(g, s)
 gather_primaryroot!(g::Gather, a...) = visit!(g, a...)
@@ -493,184 +515,118 @@ writestl(name::AbstractString, ::Nothing) = @warn "no mesh available for writing
 
 #### CropRootBox End
 
-
-
-
-# CONFIGS
-
-### Figure 1-4 root config
-root_maize = @config(
-    :RootArchitecture => :maxB => 5,
+# POPULUS BLOTTER CONFIG
+root_pop = @config(
+    :RootArchitecture => :maxB => 1,
     :BaseRoot => :T => [
-        # P F S
-          0 1 0 ; # P
-          0 0 1 ; # F
-          0 0 0 ; # S
+        0 1 0 0;
+        0 0 1 0;
+        0 0 0 1;
+        0 0 0 0;
     ],
+    :Shoot => (;
+        lb = 2 ± 0.01,
+        la = 0,
+        ln = 1,
+        lmax = 6 ± 2,
+        r = 10,
+        Δx = 0.1,
+        σ = 8,
+        θ = 0,
+        N = 3,
+        ai = 0.1 ± 0.004,
+        ar = 0.05,
+        amax = 0.2,
+        color = RGBA(0, 0, 0, 1),
+    ),
     :PrimaryRoot => (;
-        lb = 0.1 ± 0.01,
-        la = 18.0 ± 1.8,
-        ln = 0.6 ± 0.06,
-        lmax = 89.7 ± 7.4,
-        r = 6.0 ± 0.6,
-        Δx = 0.5,
-        σ = 10,
-        θ = 80 ± 8,
-        N = 1.5,
-        ri = 0.04 ± 0.004,
-        gr = 0.005,
-        thr = 0.1,
+        lb =  0.05471068 ± 0.04377101 ,
+        la =  1.020648 ± 0.8094538 ,
+        ln =  3.853271 ± 2.966908 ,
+        lmax =  24.83213 ± 6.13912 ,
+        r =  1.679158 ± 0.6369612 ,
+        Δx =  0.5 ,
+        σ =  3.065024 ,
+        θ =  45.72432 ,
+        N =  3 ,
+        ai =  0.06523519 ± 0.01947568 ,
+        ar =  0.002083466 ± 0.001329673 ,
+        amax =  0.108988 ± 0.02000999 ,
         color = RGBA(1, 0, 0, 1),
     ),
     :FirstOrderLateralRoot => (;
-        lb = 0.2 ± 0.04,
-        la = 0.4 ± 0.04,
-        ln = 0.4 ± 0.03,
-        lmax = 0.6 ± 1.6,
-        r = 2.0 ± 0.2,
-        Δx = 0.1,
-        σ = 20,
-        θ = 70 ± 15,
-        N = 1,
-        ri = 0.03 ± 0.003,
-        gr = 0.003,
-        thr = 0.07,
+        lb =  0.1726728 ± 0.1247069 ,
+        la =  1.359818 ± 0.9799089 ,
+        ln =  2.151385 ± 2.496806 ,
+        lmax =  3.104017 ± 0.76739 ,
+        r =  0.3756091 ± 0.1608982 ,
+        Δx =  0.1 ,
+        σ =  6.130047 ,
+        θ =  76.20719 ,
+        N =  2 ,
+        ai =  0.008360608 ± 0.002632792 ,
+        ar =  0.0008993517 ± 0.0001387967 ,
+        amax =  0.02724699 ± 0.001250624 ,
         color = RGBA(0, 1, 0, 1),
     ),
     :SecondOrderLateralRoot => (;
-        lb = 0,
-        la = 0.4 ± 0.02,
-        ln = 0,
-        lmax = 0.4,
-        r = 2.0 ± 0.2,
-        Δx = 0.1,
-        σ = 20,
-        θ = 70 ± 10,
-        N = 2,
-        ri = 0.02 ± 0.002,
-        gr = 0.001,
-        thr = 0.03,
-        color = RGBA(0, 0, 1, 1),
-    )
-)
-
-
-# Figure 1
-container_rhizobox = :Rhizobox => (;
-    l = 16u"inch",
-    w = 10.5u"inch",
-    h = 42u"inch",
-)
-
-
-# Figure 2
-container_rhizobox = :Rhizobox2 => (;
-    l = 5u"inch",
-    w = 10u"inch",
-    h = 40u"inch",
-    θ_w = 70u"°",
-    θ_l = 90u"°",
-    w_scale = 0,
-    l_scale = 0,
-)
-
-
-# Figure 3
-container_rhizobox = :Rhizobox2 => (;
-    l = 5u"inch",
-    w = 10u"inch",
-    h = 40u"inch",
-    θ_w = 70u"°",
-    θ_l = 90u"°",
-    w_scale = 0.25,
-    l_scale = 1,
-)
-
-
-# Figure 4
-container_rhizobox = :Rhizobox2 => (;
-    l = 5u"inch",
-    w = 10u"inch",
-    h = 40u"inch",
-    θ_w = 70u"°",
-    θ_l = 80u"°",
-    w_scale = 0,
-    l_scale = 0,
-)
-
-
-# Figure 5
-root_maize = @config(
-    :RootArchitecture => :maxB => 5,
-    :BaseRoot => :T => [
-        # P F S
-          0 1 0 ; # P
-          0 0 1 ; # F
-          0 0 0 ; # S
-    ],
-    :PrimaryRoot => (;
-        lb = 0.1 ± 0.01,
-        la = 18.0 ± 1.8,
-        ln = 0.6 ± 0.06,
-        lmax = 89.7 ± 7.4,
-        r = 6.0 ± 0.6,
-        Δx = 0.5,
-        σ = 10,
-        θ = 80 ± 8,
-        N = 1.5,
-        ri = 0.04 ± 0.004,
-        gr = 0.005,
-        thr = 1.0,
-        color = RGBA(1, 0, 0, 1),
-    ),
-    :FirstOrderLateralRoot => (;
-        lb = 0.2 ± 0.04,
-        la = 0.4 ± 0.04,
-        ln = 0.4 ± 0.03,
-        lmax = 0.6 ± 1.6,
-        r = 2.0 ± 0.2,
-        Δx = 0.1,
-        σ = 20,
-        θ = 70 ± 15,
-        N = 1,
-        ri = 0.03 ± 0.003,
-        gr = 0.003,
-        thr = 0.7,
-        color = RGBA(0, 1, 0, 1),
-    ),
-    :SecondOrderLateralRoot => (;
-        lb = 0,
-        la = 0.4 ± 0.02,
-        ln = 0,
-        lmax = 0.4,
-        r = 2.0 ± 0.2,
-        Δx = 0.1,
-        σ = 20,
-        θ = 70 ± 10,
-        N = 2,
-        ri = 0.02 ± 0.002,
-        gr = 0.001,
-        thr = 0.3,
+        lb =  0.1939656 ± 0.2206484 ,
+        la =  0.501302 ± 0.4607096 ,
+        ln =  1.044696 ± 1.221428 ,
+        lmax =  0.9197087 ± 0.2273748 ,
+        r =  0.09162867 ± 0.05556075 ,
+        Δx =  0.1 ,
+        σ =  6.130047 ,
+        θ =  35.56336 ,
+        N =  1 ,
+        ai =  0.001627657 ± 0.0004932628 ,
+        ar =  0.0004991485 ± 2.626981e-05 ,
+        amax =  0.01210977 ± 0.0002470369 ,
         color = RGBA(0, 0, 1, 1),
     )
 )
 
 container_rhizobox = :Rhizobox2 => (;
-    l = 5u"inch",
-    w = 10u"inch",
-    h = 40u"inch",
+    l = 0.125u"inch",
+    w = 11u"inch",
+    h = 15u"inch",
     θ_w = 70u"°",
     θ_l = 90u"°",
     w_scale = 0,
     l_scale = 0,
 )
-
-
-# SIMULATE AND RUN CONFIGS
 b = instance(Rhizobox2, config = container_rhizobox)
-s = instance(RootArchitecture; config = root_maize, options = (; box = b), seed = 0)
-r = simulate!(s, stop = 100u"d") #(to see diameter effect, reduce simulation length to 10d)
+
+container_pot = :Pot => (;
+    r1 = 2u"inch",
+    r2 = 1.2u"inch",
+    h = 10u"inch",
+)
+b = instance(Pot, config = container_pot)
+
+soil_core = :SoilCore => (;
+    d = 4u"inch",
+    l = 20u"cm",
+)
+c = instance(SoilCore, config = soil_core)
+
+s = instance(RootArchitecture; config = root_pop, options = (; box = b), seed = 23)
+r = simulate!(s, stop = 42u"d") #(to see diameter effect, reduce simulation length to 10d)
 
 scn = render(s)
 
 
+
+writestl("TEST.stl", s)
+
+for i in 1:30
+    s = instance(RootArchitecture; config = root_pop, options = (; box = b), seed = i)
+    r = simulate!(s, stop = 84u"d")
+    writestl(string("validation/CR_validation_77d/CR_77d_", i, ".stl"), s)
+end
+
+
+GP = gather!(s, BaseRoot; callback=gather_primaryroot!)
+Gα = [GP[i].α' for i in 1:length(GP)]
+print(Gα)
+GP[2]
