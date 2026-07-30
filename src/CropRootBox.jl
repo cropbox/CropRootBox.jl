@@ -7,8 +7,7 @@ import Meshing
 using GeometryBasics: GeometryBasics, Mesh, Point3f
 using CoordinateTransformations: IdentityTransformation, LinearMap, Transformation, Translation
 using Rotations: RotZX
-using Colors: RGBA
-import UUIDs
+using ColorTypes: RGBA
 
 @system Rendering
 
@@ -44,7 +43,12 @@ mesh(s::Pot) = begin
     r1 = Cropbox.deunitfy(s.r1', u"cm")
     r2 = Cropbox.deunitfy(s.r2', u"cm")
     h = Cropbox.deunitfy(s.h', u"cm")
-    GeometryBasics.Mesh(x -> s.dist'(x), GeometryBasics.Rect(GeometryBasics.Vec(-2r1, -2r2, -1.5h), GeometryBasics.Vec(4r1, 4r2, 3h)), Meshing.MarchingCubes(), samples=(50, 50, 50))
+    xs = range(-2r1, 2r1; length=50)
+    ys = range(-2r2, 2r2; length=50)
+    zs = range(-1.5h, 1.5h; length=50)
+    values = [s.dist'(Point3f(x, y, z)) for x in xs, y in ys, z in zs]
+    vertices, faces = Meshing.isosurface(values, Meshing.MarchingCubes(), xs, ys, zs)
+    GeometryBasics.Mesh(Point3f.(vertices), GeometryBasics.TriangleFace{Int}.(faces))
 end
 
 @system Rhizobox(Container) <: Container begin
@@ -297,7 +301,11 @@ mesh(s::RootSegment) = begin
 
     c = s.color'
     n = length(GeometryBasics.coordinates(m))
-    GeometryBasics.pointmeta(m; color=fill(c, n))
+    GeometryBasics.Mesh(
+        GeometryBasics.faces(m);
+        GeometryBasics.vertex_attributes(m)...,
+        color=fill(c, n),
+    )
 end
 
 #TODO: provide @macro / function to automatically build a series of related Systems
