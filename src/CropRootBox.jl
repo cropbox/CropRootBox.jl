@@ -8,7 +8,6 @@ using GeometryBasics: GeometryBasics, Mesh, Point3f
 using CoordinateTransformations: IdentityTransformation, LinearMap, Transformation, Translation
 using Rotations: RotZX
 using Colors: RGBA
-import UUIDs
 
 @system Rendering
 
