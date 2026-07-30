@@ -301,7 +301,11 @@ mesh(s::RootSegment) = begin
 
     c = s.color'
     n = length(GeometryBasics.coordinates(m))
-    GeometryBasics.pointmeta(m; color=fill(c, n))
+    GeometryBasics.Mesh(
+        GeometryBasics.faces(m);
+        GeometryBasics.vertex_attributes(m)...,
+        color=fill(c, n),
+    )
 end
 
 #TODO: provide @macro / function to automatically build a series of related Systems

@@ -78,10 +78,35 @@ root_maize = @config(
     s = instance(CropRootBox.RootArchitecture; config = root_maize, options = (; box = b), seed = 0)
     r = simulate!(s, stop = 100u"d")
     @test r.time[end] == 100u"d"
-    # using GLMakie
-    # scn = CropRootBox.render(s)
-    # GLMakie.save("root_maize.png", scn)
+
+    geometry = CropRootBox.GeometryBasics
+    root = first(s.roots')
+    root_mesh = CropRootBox.mesh(root)
+    attributes = geometry.vertex_attributes(root_mesh)
+
+    @testset "root mesh attributes" begin
+        @test haskey(attributes, :color)
+        @test length(attributes.color) == length(geometry.coordinates(root_mesh))
+        @test all(==(root.color'), attributes.color)
+    end
+
+    @testset "render" begin
+        figure = CropRootBox.render(s; size=(200, 200))
+        @test figure isa CropRootBox.Makie.Figure
+    end
+
     CropRootBox.writevtk(tempname(), s)
     # CropRootBox.writepvd(tempname(), CropRootBox.RootArchitecture, config = root_maize, stop = 50)
-    CropRootBox.writestl(tempname(), s)
+
+    @testset "STL export" begin
+        mktempdir() do directory
+            path = joinpath(directory, "root.stl")
+            CropRootBox.writestl(path, root)
+            loaded = CropRootBox.FileIO.load(path)
+
+            @test isfile(path)
+            @test length(geometry.faces(loaded)) == length(geometry.faces(root_mesh))
+            @test Set(geometry.coordinates(loaded)) == Set(geometry.coordinates(root_mesh))
+        end
+    end
 end
