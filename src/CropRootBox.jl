@@ -7,7 +7,7 @@ import Meshing
 using GeometryBasics: GeometryBasics, Mesh, Point3f
 using CoordinateTransformations: IdentityTransformation, LinearMap, Transformation, Translation
 using Rotations: RotZX
-using Colors: RGBA
+using ColorTypes: RGBA
 
 @system Rendering
 
