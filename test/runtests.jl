@@ -54,6 +54,27 @@ root_maize = @config(
 
 @testset "root" begin
     b = instance(CropRootBox.Pot)
+    @testset "pot mesh" begin
+        geometry = CropRootBox.GeometryBasics
+        pot_mesh = CropRootBox.mesh(b)
+        points = geometry.coordinates(pot_mesh)
+
+        @test !isempty(points)
+        @test !isempty(geometry.faces(pot_mesh))
+        @test all(isfinite, Iterators.flatten(points))
+
+        xmin, xmax = extrema(getindex.(points, 1))
+        ymin, ymax = extrema(getindex.(points, 2))
+        zmin, zmax = extrema(getindex.(points, 3))
+
+        @test isapprox(xmin, -10; atol=1)
+        @test isapprox(xmax, 10; atol=1)
+        @test isapprox(ymin, -10; atol=1)
+        @test isapprox(ymax, 10; atol=1)
+        @test isapprox(zmin, -30; atol=1)
+        @test isapprox(zmax, 0; atol=1)
+    end
+
     s = instance(CropRootBox.RootArchitecture; config = root_maize, options = (; box = b), seed = 0)
     r = simulate!(s, stop = 100u"d")
     @test r.time[end] == 100u"d"
