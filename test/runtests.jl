@@ -1,5 +1,6 @@
 using Cropbox
 using CropRootBox
+import CairoMakie
 using Test
 
 root_maize = @config(
@@ -54,6 +55,14 @@ root_maize = @config(
 
 @testset "root" begin
     b = instance(CropRootBox.Pot)
+    geometry = CropRootBox.GeometryBasics
+    m = CropRootBox.mesh(b)
+    P = geometry.coordinates(m)
+    @test !isempty(geometry.faces(m))
+    for (i, bounds) in enumerate(((-10, 10), (-10, 10), (-30, 0)))
+        @test all(isapprox.(extrema(p[i] for p in P), bounds; atol=1))
+    end
+
     s = instance(CropRootBox.RootArchitecture; config = root_maize, options = (; box = b), seed = 0)
     r = simulate!(s, stop = 100u"d")
     @test r.time[end] == 100u"d"
@@ -63,4 +72,16 @@ root_maize = @config(
     CropRootBox.writevtk(tempname(), s)
     # CropRootBox.writepvd(tempname(), CropRootBox.RootArchitecture, config = root_maize, stop = 50)
     CropRootBox.writestl(tempname(), s)
+
+    root = first(s.roots')
+    m = CropRootBox.mesh(root)
+    @test m.color == fill(root.color', length(geometry.coordinates(m)))
+
+    mktempdir() do dir
+        for (name, soilcore) in (("root", nothing), ("soilcore", instance(CropRootBox.SoilCore)))
+            path = joinpath(dir, "$name.png")
+            CairoMakie.save(path, CropRootBox.render(s; soilcore, size=(200, 200)))
+            @test filesize(path) > 0
+        end
+    end
 end
