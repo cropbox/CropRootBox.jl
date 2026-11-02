@@ -1,7 +1,7 @@
 name = "CropRootBox"
 uuid = "0b8d6067-eb21-45e9-ba5b-895cd2a7ad38"
 authors = ["Kyungdahm Yun <tomyun@gmail.com>"]
-version = "0.1.15-DEV"
+version = "0.1.16-DEV"
 
 [deps]
 ColorTypes = "3da002f7-5984-5a60-b8a6-cbb66c0b333f"
@@ -19,7 +19,7 @@ WriteVTK = "64499a7a-5c06-52f2-abe2-ccb03c286192"
 [compat]
 ColorTypes = "0.11, 0.12"
 CoordinateTransformations = "0.6"
-Cropbox = "0.3"
+Cropbox = "0.3, 0.4"
 Distributions = "0.25"
 FileIO = "1"
 GeometryBasics = "0.5"
